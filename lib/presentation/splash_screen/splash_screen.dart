@@ -3,6 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
+import '../../theme/app_theme.dart';
+import '../onboarding_flow/onboarding_flow.dart';
+
+// Ensure path matches your structure
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -31,56 +35,38 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _setupAnimations() {
-    // Logo animation controller
     _logoAnimationController = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
 
-    // Loading animation controller
     _loadingAnimationController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
     )..repeat();
 
-    // Logo scale animation
-    _logoScaleAnimation = Tween<double>(
-      begin: 0.8,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _logoAnimationController,
-      curve: Curves.elasticOut,
-    ));
+    _logoScaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(
+          parent: _logoAnimationController, curve: Curves.elasticOut),
+    );
 
-    // Logo fade animation
-    _logoFadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _logoAnimationController,
-      curve: Curves.easeInOut,
-    ));
+    _logoFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+          parent: _logoAnimationController, curve: Curves.easeInOut),
+    );
 
-    // Loading animation
-    _loadingAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _loadingAnimationController,
-      curve: Curves.easeInOut,
-    ));
+    _loadingAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+          parent: _loadingAnimationController, curve: Curves.easeInOut),
+    );
 
-    // Start logo animation
     _logoAnimationController.forward();
   }
 
   Future<void> _initializeApp() async {
     try {
-      // Simulate initialization tasks
       await _performInitializationTasks();
-
       if (mounted) {
-        // Navigate to next screen after successful initialization
         await Future.delayed(const Duration(milliseconds: 500));
         _navigateToNextScreen();
       }
@@ -91,8 +77,6 @@ class _SplashScreenState extends State<SplashScreen>
           _showRetryOption = true;
           _statusMessage = "Failed to initialize. Please try again.";
         });
-
-        // Auto-retry after 5 seconds
         Future.delayed(const Duration(seconds: 5), () {
           if (mounted && _showRetryOption) {
             _retryInitialization();
@@ -103,33 +87,19 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _performInitializationTasks() async {
-    // Simulate checking authentication status
-    setState(() {
-      _statusMessage = "Checking authentication...";
-    });
+    setState(() => _statusMessage = "Checking authentication...");
     await Future.delayed(const Duration(milliseconds: 800));
 
-    // Simulate loading user preferences
-    setState(() {
-      _statusMessage = "Loading preferences...";
-    });
+    setState(() => _statusMessage = "Loading preferences...");
     await Future.delayed(const Duration(milliseconds: 600));
 
-    // Simulate initializing camera permissions
-    setState(() {
-      _statusMessage = "Preparing camera...";
-    });
+    setState(() => _statusMessage = "Preparing camera...");
     await Future.delayed(const Duration(milliseconds: 700));
 
-    // Simulate preparing QR scanner
-    setState(() {
-      _statusMessage = "Initializing QR scanner...";
-    });
+    setState(() => _statusMessage = "Initializing QR scanner...");
     await Future.delayed(const Duration(milliseconds: 500));
 
-    setState(() {
-      _statusMessage = "Ready!";
-    });
+    setState(() => _statusMessage = "Ready!");
   }
 
   void _retryInitialization() {
@@ -142,16 +112,10 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _navigateToNextScreen() {
-    // Simulate navigation logic based on user state
-    // For demo purposes, we'll just show a completion message
-    setState(() {
-      _statusMessage = "Welcome to Lucky Rascals!";
-    });
-
-    // In a real app, you would navigate to the appropriate screen:
-    // Navigator.pushReplacementNamed(context, '/qr-scanner');
-    // Navigator.pushReplacementNamed(context, '/onboarding');
-    // Navigator.pushReplacementNamed(context, '/mobile-input');
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const OnboardingFlow()),
+    );
   }
 
   @override
@@ -165,11 +129,9 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle(
+        value: const SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
           statusBarIconBrightness: Brightness.light,
-          systemNavigationBarColor: AppTheme.lightTheme.primaryColor,
-          systemNavigationBarIconBrightness: Brightness.light,
         ),
         child: Container(
           width: double.infinity,
@@ -180,7 +142,7 @@ class _SplashScreenState extends State<SplashScreen>
               end: Alignment.bottomRight,
               colors: [
                 AppTheme.lightTheme.primaryColor,
-                AppTheme.lightTheme.primaryColor.withValues(alpha: 0.8),
+                AppTheme.lightTheme.primaryColor.withAlpha(204),
                 AppTheme.lightTheme.colorScheme.primaryContainer,
               ],
             ),
@@ -189,13 +151,13 @@ class _SplashScreenState extends State<SplashScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logo section
+                // Logo
                 Expanded(
                   flex: 3,
                   child: Center(
                     child: AnimatedBuilder(
                       animation: _logoAnimationController,
-                      builder: (context, child) {
+                      builder: (_, __) {
                         return Transform.scale(
                           scale: _logoScaleAnimation.value,
                           child: FadeTransition(
@@ -208,29 +170,21 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                 ),
 
-                // Status and loading section
+                // Status and loader
                 Expanded(
                   flex: 1,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Status message
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 8.w),
-                        child: Text(
-                          _statusMessage,
-                          style:
-                              AppTheme.lightTheme.textTheme.bodyLarge?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          textAlign: TextAlign.center,
+                      Text(
+                        _statusMessage,
+                        style:
+                            AppTheme.lightTheme.textTheme.bodyLarge?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-
                       SizedBox(height: 3.h),
-
-                      // Loading indicator or retry button
                       _showRetryOption
                           ? _buildRetryButton()
                           : _buildLoadingIndicator(),
@@ -238,7 +192,7 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                 ),
 
-                // Bottom branding
+                // Footer
                 Padding(
                   padding: EdgeInsets.only(bottom: 4.h),
                   child: Column(
@@ -247,8 +201,7 @@ class _SplashScreenState extends State<SplashScreen>
                         "Scan • Watch • Earn",
                         style:
                             AppTheme.lightTheme.textTheme.bodyMedium?.copyWith(
-                          color: Colors.white.withValues(alpha: 0.8),
-                          letterSpacing: 1.2,
+                          color: Colors.white.withAlpha(204),
                         ),
                       ),
                       SizedBox(height: 1.h),
@@ -256,7 +209,7 @@ class _SplashScreenState extends State<SplashScreen>
                         "Made in India 🇮🇳",
                         style:
                             AppTheme.lightTheme.textTheme.bodySmall?.copyWith(
-                          color: Colors.white.withValues(alpha: 0.6),
+                          color: Colors.white.withAlpha(153),
                         ),
                       ),
                     ],
@@ -279,7 +232,7 @@ class _SplashScreenState extends State<SplashScreen>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
+            color: Colors.black.withAlpha(51),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -288,16 +241,9 @@ class _SplashScreenState extends State<SplashScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // QR Code icon
-          CustomIconWidget(
-            iconName: 'qr_code_scanner',
-            color: AppTheme.lightTheme.primaryColor,
-            size: 12.w,
-          ),
-
+          Icon(Icons.qr_code_scanner,
+              size: 12.w, color: AppTheme.lightTheme.primaryColor),
           SizedBox(height: 1.h),
-
-          // App name
           Text(
             "Lucky",
             style: AppTheme.lightTheme.textTheme.titleLarge?.copyWith(
@@ -306,7 +252,6 @@ class _SplashScreenState extends State<SplashScreen>
               fontSize: 16.sp,
             ),
           ),
-
           Text(
             "Rascals",
             style: AppTheme.lightTheme.textTheme.titleMedium?.copyWith(
@@ -321,85 +266,68 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Widget _buildLoadingIndicator() {
-    return _isInitializing
-        ? Column(
-            children: [
-              SizedBox(
-                width: 8.w,
-                height: 8.w,
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  strokeWidth: 2.0,
-                ),
-              ),
-              SizedBox(height: 2.h),
-              Container(
-                width: 60.w,
-                height: 0.5.h,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-                child: AnimatedBuilder(
-                  animation: _loadingAnimation,
-                  builder: (context, child) {
-                    return FractionallySizedBox(
-                      alignment: Alignment.centerLeft,
-                      widthFactor: _loadingAnimation.value,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          )
-        : Container();
-  }
-
-  Widget _buildRetryButton() {
     return Column(
       children: [
-        CustomIconWidget(
-          iconName: 'error_outline',
-          color: Colors.white,
-          size: 8.w,
+        SizedBox(
+          width: 8.w,
+          height: 8.w,
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            strokeWidth: 2.0,
+          ),
         ),
         SizedBox(height: 2.h),
-        ElevatedButton(
-          onPressed: _retryInitialization,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.white,
-            foregroundColor: AppTheme.lightTheme.primaryColor,
-            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 1.5.h),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(25),
-            ),
+        Container(
+          width: 60.w,
+          height: 0.5.h,
+          decoration: BoxDecoration(
+            color: Colors.white.withAlpha(77),
+            borderRadius: BorderRadius.circular(2),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CustomIconWidget(
-                iconName: 'refresh',
-                color: AppTheme.lightTheme.primaryColor,
-                size: 5.w,
-              ),
-              SizedBox(width: 2.w),
-              Text(
-                "Retry",
-                style: AppTheme.lightTheme.textTheme.labelLarge?.copyWith(
-                  color: AppTheme.lightTheme.primaryColor,
-                  fontWeight: FontWeight.w600,
+          child: AnimatedBuilder(
+            animation: _loadingAnimation,
+            builder: (_, __) {
+              return FractionallySizedBox(
+                alignment: Alignment.centerLeft,
+                widthFactor: _loadingAnimation.value,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-              ),
-            ],
+              );
+            },
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildRetryButton() {
+    return ElevatedButton(
+      onPressed: _retryInitialization,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.white,
+        foregroundColor: AppTheme.lightTheme.primaryColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 1.5.h),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.refresh,
+              size: 5.w, color: AppTheme.lightTheme.primaryColor),
+          SizedBox(width: 2.w),
+          Text(
+            "Retry",
+            style: AppTheme.lightTheme.textTheme.labelLarge?.copyWith(
+              color: AppTheme.lightTheme.primaryColor,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

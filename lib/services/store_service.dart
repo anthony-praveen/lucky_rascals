@@ -7,7 +7,13 @@ class StoreService {
   factory StoreService() => _instance;
   StoreService._internal();
 
-  Future<SupabaseClient> get client async => await SupabaseService().client;
+  Future<SupabaseClient> get client async {
+    final supabaseClient = await SupabaseService().client;
+    if (supabaseClient == null) {
+      throw Exception('Supabase client is not initialized');
+    }
+    return supabaseClient;
+  }
 
   // Get store by QR code
   Future<Map<String, dynamic>?> getStoreByQRCode(String qrCode) async {

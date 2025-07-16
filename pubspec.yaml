@@ -1,5 +1,5 @@
 name: lucky_rascals
-description: A QR-based hyperlocal marketing application for instant UPI rewards
+description: A QR-based hyperlocal marketing app that connects consumers with local businesses through rewarded ad experiences.
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.2.0 <4.0.0'
+  sdk: '>=3.0.0 <4.0.0'
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -30,7 +30,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -60,9 +59,17 @@ dependencies:
   google_fonts: ^6.1.0
 
   # Supabase Integration
-  supabase_flutter: ^2.6.0
+  supabase_flutter: ^2.8.0
 
   web: any
+  qr_code_scanner: any
+  camera: any
+  permission_handler: any
+
+  # Additional dependencies for OTP and messaging
+  crypto: ^3.0.3
+  http: ^1.1.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

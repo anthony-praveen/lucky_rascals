@@ -1,17 +1,11 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
-import '../../routes/app_routes.dart';
 import '../../services/otp_service.dart';
-import '../../theme/app_theme.dart';
-import '../../widgets/custom_icon_widget.dart';
 import './widgets/phone_input_widget.dart';
 import './widgets/trust_indicators_widget.dart';
-import 'widgets/phone_input_widget.dart';
-import 'widgets/trust_indicators_widget.dart';
 
 class MobileNumberInput extends StatefulWidget {
   const MobileNumberInput({Key? key}) : super(key: key);
@@ -33,6 +27,7 @@ class _MobileNumberInputState extends State<MobileNumberInput>
   bool _isLoading = false;
   bool _isPhoneValid = false;
   String _storeId = '';
+  String? _lastErrorMessage;
 
   @override
   void initState() {
@@ -135,6 +130,7 @@ class _MobileNumberInputState extends State<MobileNumberInput>
 
     setState(() {
       _isLoading = true;
+      _lastErrorMessage = null;
     });
 
     try {
@@ -144,13 +140,13 @@ class _MobileNumberInputState extends State<MobileNumberInput>
       final isWhatsAppEnabled =
           await _otpService.isWhatsAppEnabled(formattedPhone);
 
-      // Send OTP
-      await _otpService.sendOTP(
+      // Send OTP with comprehensive error handling
+      final result = await _otpService.sendOTP(
         phoneNumber: formattedPhone,
         otpType: isWhatsAppEnabled ? 'whatsapp' : 'sms',
       );
 
-      if (mounted) {
+      if (mounted && result['success'] == true) {
         // Show success feedback
         HapticFeedback.lightImpact();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -163,7 +159,9 @@ class _MobileNumberInputState extends State<MobileNumberInput>
                   size: 5.w,
                 ),
                 SizedBox(width: 3.w),
-                Text('OTP sent successfully!'),
+                Expanded(
+                  child: Text(result['message'] ?? 'OTP sent successfully!'),
+                ),
               ],
             ),
             backgroundColor: Colors.green,
@@ -179,11 +177,16 @@ class _MobileNumberInputState extends State<MobileNumberInput>
             'phone_number': formattedPhone,
             'otp_type': isWhatsAppEnabled ? 'whatsapp' : 'sms',
             'store_id': _storeId,
+            'mock_otp': result['mock_otp'], // For development
           },
         );
       }
     } catch (error) {
       if (mounted) {
+        setState(() {
+          _lastErrorMessage = error.toString().replaceFirst('Exception: ', '');
+        });
+
         HapticFeedback.heavyImpact();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -196,12 +199,17 @@ class _MobileNumberInputState extends State<MobileNumberInput>
                 ),
                 SizedBox(width: 3.w),
                 Expanded(
-                  child: Text('Failed to send OTP: $error'),
+                  child: Text(_lastErrorMessage ?? 'Failed to send OTP'),
                 ),
               ],
             ),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: () => _sendOTP(),
+            ),
           ),
         );
       }
@@ -410,71 +418,109 @@ class _MobileNumberInputState extends State<MobileNumberInput>
   }
 
   Widget _buildSendOTPButton() {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        gradient: _isPhoneValid && !_isLoading
-            ? LinearGradient(
-                colors: [
-                  AppTheme.primaryLight,
-                  AppTheme.primaryLight.withValues(alpha: 0.8),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : null,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: _isPhoneValid && !_isLoading
-            ? [
-                BoxShadow(
-                  color: AppTheme.primaryLight.withValues(alpha: 0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ]
-            : null,
-      ),
-      child: ElevatedButton(
-        onPressed: _isPhoneValid && !_isLoading ? _sendOTP : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: _isPhoneValid && !_isLoading
-              ? Colors.transparent
-              : Colors.grey[300],
-          foregroundColor: Colors.white,
-          shadowColor: Colors.transparent,
-          padding: EdgeInsets.symmetric(vertical: 4.w),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        child: _isLoading
-            ? SizedBox(
-                width: 5.w,
-                height: 5.w,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2,
-                ),
-              )
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CustomIconWidget(
-                    iconName: 'send',
-                    color: Colors.white,
-                    size: 5.w,
-                  ),
-                  SizedBox(width: 2.w),
-                  Text(
-                    'Send OTP',
-                    style: AppTheme.lightTheme.textTheme.bodyLarge?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
+    return Column(
+      children: [
+        // Show error message if present
+        if (_lastErrorMessage != null)
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(3.w),
+            margin: EdgeInsets.only(bottom: 2.h),
+            decoration: BoxDecoration(
+              color: Colors.red[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.red[200]!),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.error_outline, color: Colors.red[600], size: 5.w),
+                SizedBox(width: 2.w),
+                Expanded(
+                  child: Text(
+                    _lastErrorMessage!,
+                    style: TextStyle(
+                      color: Colors.red[700],
+                      fontSize: 12.sp,
                     ),
                   ),
-                ],
+                ),
+                GestureDetector(
+                  onTap: () => setState(() => _lastErrorMessage = null),
+                  child: Icon(Icons.close, color: Colors.red[600], size: 4.w),
+                ),
+              ],
+            ),
+          ),
+
+        // Send OTP button
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            gradient: _isPhoneValid && !_isLoading
+                ? LinearGradient(
+                    colors: [
+                      AppTheme.primaryLight,
+                      AppTheme.primaryLight.withValues(alpha: 0.8),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: _isPhoneValid && !_isLoading
+                ? [
+                    BoxShadow(
+                      color: AppTheme.primaryLight.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
+          ),
+          child: ElevatedButton(
+            onPressed: _isPhoneValid && !_isLoading ? _sendOTP : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _isPhoneValid && !_isLoading
+                  ? Colors.transparent
+                  : Colors.grey[300],
+              foregroundColor: Colors.white,
+              shadowColor: Colors.transparent,
+              padding: EdgeInsets.symmetric(vertical: 4.w),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
-      ),
+            ),
+            child: _isLoading
+                ? SizedBox(
+                    width: 5.w,
+                    height: 5.w,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CustomIconWidget(
+                        iconName: 'send',
+                        color: Colors.white,
+                        size: 5.w,
+                      ),
+                      SizedBox(width: 2.w),
+                      Text(
+                        'Send OTP',
+                        style:
+                            AppTheme.lightTheme.textTheme.bodyLarge?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      ],
     );
   }
 

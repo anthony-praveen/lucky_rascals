@@ -62,15 +62,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _navigateToQRScanner() {
-    Navigator.pushNamed(context, AppRoutes.qrScanner);
+    Navigator.pushNamed(context, '/qr-scanner');
   }
 
   void _navigateToEarnings() {
-    Navigator.pushNamed(context, AppRoutes.earnings);
+    Navigator.pushNamed(context, '/earnings');
   }
 
   void _navigateToProfile() {
-    Navigator.pushNamed(context, AppRoutes.profile);
+    Navigator.pushNamed(context, '/profile');
   }
 
   Future<void> _handleLogout() async {

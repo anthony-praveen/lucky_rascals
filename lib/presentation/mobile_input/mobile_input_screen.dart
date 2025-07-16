@@ -20,6 +20,7 @@ class _MobileInputScreenState extends State<MobileInputScreen> {
   bool _isLoading = false;
   bool _isPhoneValid = false;
   String _storeId = '';
+  String? _lastErrorMessage;
 
   @override
   void initState() {
@@ -28,8 +29,9 @@ class _MobileInputScreenState extends State<MobileInputScreen> {
 
     // Get store ID from arguments if navigated from QR scanner
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final args = ModalRoute.of(context)?.settings.arguments as String?;
-      if (args != null) {
+      final route = ModalRoute.of(context);
+      final args = route?.settings.arguments;
+      if (args is String) {
         setState(() {
           _storeId = args;
         });
@@ -92,6 +94,7 @@ class _MobileInputScreenState extends State<MobileInputScreen> {
 
     setState(() {
       _isLoading = true;
+      _lastErrorMessage = null;
     });
 
     try {
@@ -101,13 +104,33 @@ class _MobileInputScreenState extends State<MobileInputScreen> {
       final isWhatsAppEnabled =
           await _otpService.isWhatsAppEnabled(formattedPhone);
 
-      // Send OTP
-      await _otpService.sendOTP(
+      // Send OTP with enhanced error handling
+      final result = await _otpService.sendOTP(
         phoneNumber: formattedPhone,
         otpType: isWhatsAppEnabled ? 'whatsapp' : 'sms',
       );
 
-      if (mounted) {
+      if (mounted && result['success'] == true) {
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    result['message'] ?? 'OTP sent successfully',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+
         // Navigate to OTP verification screen
         Navigator.pushNamed(
           context,
@@ -121,10 +144,31 @@ class _MobileInputScreenState extends State<MobileInputScreen> {
       }
     } catch (error) {
       if (mounted) {
+        setState(() {
+          _lastErrorMessage = error.toString().replaceFirst('Exception: ', '');
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to send OTP: $error'),
+            content: Row(
+              children: [
+                Icon(Icons.error, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _lastErrorMessage ?? 'Failed to send OTP',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
             backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: () => _proceedToOTP(),
+            ),
           ),
         );
       }
@@ -431,36 +475,73 @@ class _MobileInputScreenState extends State<MobileInputScreen> {
   }
 
   Widget _buildContinueButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: _isPhoneValid && !_isLoading ? _proceedToOTP : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.lightTheme.primaryColor,
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: Colors.grey[300],
-          padding: EdgeInsets.symmetric(vertical: 4.w),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+    return Column(
+      children: [
+        // Show error message if present
+        if (_lastErrorMessage != null)
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(3.w),
+            margin: EdgeInsets.only(bottom: 2.h),
+            decoration: BoxDecoration(
+              color: Colors.red[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.red[200]!),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.error_outline, color: Colors.red[600], size: 5.w),
+                SizedBox(width: 2.w),
+                Expanded(
+                  child: Text(
+                    _lastErrorMessage!,
+                    style: TextStyle(
+                      color: Colors.red[700],
+                      fontSize: 12.sp,
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => setState(() => _lastErrorMessage = null),
+                  child: Icon(Icons.close, color: Colors.red[600], size: 4.w),
+                ),
+              ],
+            ),
+          ),
+
+        // Continue button
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: _isPhoneValid && !_isLoading ? _proceedToOTP : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.lightTheme.primaryColor,
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: Colors.grey[300],
+              padding: EdgeInsets.symmetric(vertical: 4.w),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: _isLoading
+                ? SizedBox(
+                    width: 5.w,
+                    height: 5.w,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : Text(
+                    'Continue',
+                    style: AppTheme.lightTheme.textTheme.bodyLarge?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
           ),
         ),
-        child: _isLoading
-            ? SizedBox(
-                width: 5.w,
-                height: 5.w,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2,
-                ),
-              )
-            : Text(
-                'Continue',
-                style: AppTheme.lightTheme.textTheme.bodyLarge?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-      ),
+      ],
     );
   }
 

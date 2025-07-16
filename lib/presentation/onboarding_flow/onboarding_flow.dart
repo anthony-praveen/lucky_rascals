@@ -39,7 +39,7 @@ class _OnboardingFlowState extends State<OnboardingFlow>
       subtitle:
           'Watch short ads and get money directly transferred to your UPI wallet',
       description:
-          'Skip the waiting - your earnings land in your account immediately after watching',
+          'No waiting - your earnings land in your account immediately after watching',
       imagePath:
           'https://images.pexels.com/photos/4968639/pexels-photo-4968639.jpeg?w=500&q=80',
       primaryColor: AppTheme.accentLight,

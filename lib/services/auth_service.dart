@@ -7,7 +7,13 @@ class AuthService {
   factory AuthService() => _instance;
   AuthService._internal();
 
-  Future<SupabaseClient> get client async => await SupabaseService().client;
+  Future<SupabaseClient> get client async {
+    final supabaseClient = await SupabaseService().client;
+    if (supabaseClient == null) {
+      throw Exception('Supabase client is not initialized');
+    }
+    return supabaseClient;
+  }
 
   // Register user with phone number
   Future<AuthResponse> signUpWithPhone({
