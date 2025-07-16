@@ -3,11 +3,16 @@ import 'package:flutter/foundation.dart';
 import './supabase_service.dart';
 import './twilio_service.dart';
 import './environment_service.dart';
+import '../env/constants.dart';
 
 class OTPService {
   final SupabaseService _supabaseService = SupabaseService();
   final TwilioService _twilioService = TwilioService();
   final EnvironmentService _environmentService = EnvironmentService();
+
+  // Use constants from centralized constants file
+  final bool _enableMockOTP = AppConstants.ENABLE_MOCK_OTP;
+  final String _mockOTP = AppConstants.MOCK_OTP;
 
   // Get initialized Supabase client with comprehensive error handling
   Future<SupabaseClient?> _getClient() async {
@@ -23,7 +28,7 @@ class OTPService {
     }
   }
 
-  // Enhanced phone number validation
+  // Enhanced phone number validation - supports +91, 91, and raw 10-digit input
   bool _isValidPhoneNumber(String? phoneNumber) {
     if (phoneNumber == null || phoneNumber.isEmpty) {
       return false;
@@ -32,25 +37,37 @@ class OTPService {
     // Remove spaces and special characters except +
     final cleanPhone = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
 
-    // Check for valid format
+    // Support multiple formats: +91xxxxxxxxxx, 91xxxxxxxxxx, xxxxxxxxxx
     if (cleanPhone.startsWith('+91') && cleanPhone.length == 13) {
       final number = cleanPhone.substring(3);
       return number.startsWith(RegExp(r'[6-9]')) && number.length == 10;
+    } else if (cleanPhone.startsWith('91') && cleanPhone.length == 12) {
+      final number = cleanPhone.substring(2);
+      return number.startsWith(RegExp(r'[6-9]')) && number.length == 10;
+    } else if (cleanPhone.length == 10) {
+      return cleanPhone.startsWith(RegExp(r'[6-9]'));
     }
 
     return false;
   }
 
-  // Format phone number consistently
+  // Format phone number consistently - normalize to +91xxxxxxxxxx
   String? _formatPhoneNumber(String? phoneNumber) {
     if (phoneNumber == null || phoneNumber.isEmpty) {
       return null;
     }
 
-    final cleanPhone = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+    // Remove all non-digit characters except +
+    final cleanPhone = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
 
-    if (cleanPhone.length == 10 && cleanPhone.startsWith(RegExp(r'[6-9]'))) {
-      return '+91$cleanPhone';
+    // Handle different input formats
+    if (cleanPhone.startsWith('+91') && cleanPhone.length == 13) {
+      return cleanPhone; // Already in correct format
+    } else if (cleanPhone.startsWith('91') && cleanPhone.length == 12) {
+      return '+$cleanPhone'; // Add + prefix
+    } else if (cleanPhone.length == 10 &&
+        cleanPhone.startsWith(RegExp(r'[6-9]'))) {
+      return '+91$cleanPhone'; // Add country code
     }
 
     return null;
@@ -92,17 +109,15 @@ class OTPService {
       final isSupabaseConfigured = await _isSupabaseConfigured();
       final isTwilioConfigured = _twilioService.isConfigured;
 
-      // Development mode with mock OTP
-      if (_environmentService.enableMockOTP &&
-          !_environmentService.isProduction) {
-        debugPrint(
-            'Using mock OTP for development: ${_environmentService.mockOTPCode}');
+      // Development mode with mock OTP using constants
+      if (_enableMockOTP && !_environmentService.isProduction) {
+        debugPrint('Using mock OTP for development: $_mockOTP');
         return {
           'success': true,
           'message': 'OTP sent successfully (Development Mode)',
           'otp_type': otpType,
           'phone_number': formattedPhone,
-          'mock_otp': _environmentService.mockOTPCode,
+          'mock_otp': _mockOTP,
           'is_mock': true,
         };
       }
@@ -159,8 +174,8 @@ class OTPService {
     } catch (error) {
       debugPrint('OTP send error: $error');
 
-      // Only fallback to mock in development
-      if (_environmentService.enableMockOTP &&
+      // Only fallback to mock in development using constants
+      if (_enableMockOTP &&
           _environmentService.isDevelopment &&
           !error.toString().contains('Invalid phone number')) {
         debugPrint('Falling back to mock OTP due to error: $error');
@@ -169,7 +184,7 @@ class OTPService {
           'message': 'OTP sent successfully (Fallback Mode)',
           'otp_type': otpType,
           'phone_number': phoneNumber,
-          'mock_otp': _environmentService.mockOTPCode,
+          'mock_otp': _mockOTP,
           'is_mock': true,
         };
       }
@@ -259,9 +274,8 @@ class OTPService {
         throw Exception('Unable to format phone number.');
       }
 
-      // Check for mock OTP in development
-      if (_environmentService.enableMockOTP &&
-          token == _environmentService.mockOTPCode) {
+      // Check for mock OTP in development using constants
+      if (_enableMockOTP && token == _mockOTP) {
         debugPrint('Mock OTP verified successfully');
         return {
           'success': true,

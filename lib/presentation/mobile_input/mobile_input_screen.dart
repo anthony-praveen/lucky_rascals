@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
+import '../../env/constants.dart';
 import '../../services/otp_service.dart';
 
 class MobileInputScreen extends StatefulWidget {
@@ -57,36 +58,40 @@ class _MobileInputScreenState extends State<MobileInputScreen> {
     }
   }
 
+  // Enhanced phone number validation supporting +91, 91, and raw 10-digit input
   bool _isValidPhoneNumber(String phone) {
-    // Remove any non-digit characters
-    final cleanPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
+    if (phone.isEmpty) return false;
 
-    // Check if it's a valid Indian mobile number
-    if (cleanPhone.length == 10) {
+    // Remove any non-digit characters except +
+    final cleanPhone = phone.replaceAll(RegExp(r'[^\d+]'), '');
+
+    // Support multiple formats: +91xxxxxxxxxx, 91xxxxxxxxxx, xxxxxxxxxx
+    if (cleanPhone.startsWith('+91') && cleanPhone.length == 13) {
+      final number = cleanPhone.substring(3);
+      return number.startsWith(RegExp(r'[6-9]')) && number.length == 10;
+    } else if (cleanPhone.startsWith('91') && cleanPhone.length == 12) {
+      final number = cleanPhone.substring(2);
+      return number.startsWith(RegExp(r'[6-9]')) && number.length == 10;
+    } else if (cleanPhone.length == 10) {
       return cleanPhone.startsWith(RegExp(r'[6-9]'));
-    } else if (cleanPhone.length == 12) {
-      return cleanPhone.startsWith('91') &&
-          cleanPhone.substring(2).startsWith(RegExp(r'[6-9]'));
-    } else if (cleanPhone.length == 13) {
-      return cleanPhone.startsWith('+91') &&
-          cleanPhone.substring(3).startsWith(RegExp(r'[6-9]'));
     }
 
     return false;
   }
 
+  // Format phone number consistently - normalize to +91xxxxxxxxxx
   String _formatPhoneNumber(String phone) {
-    final cleanPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
+    final cleanPhone = phone.replaceAll(RegExp(r'[^\d+]'), '');
 
-    if (cleanPhone.length == 10) {
-      return '+91$cleanPhone';
-    } else if (cleanPhone.length == 12 && cleanPhone.startsWith('91')) {
-      return '+$cleanPhone';
-    } else if (cleanPhone.length == 13 && cleanPhone.startsWith('91')) {
-      return '+$cleanPhone';
+    if (cleanPhone.startsWith('+91') && cleanPhone.length == 13) {
+      return cleanPhone; // Already in correct format
+    } else if (cleanPhone.startsWith('91') && cleanPhone.length == 12) {
+      return '+$cleanPhone'; // Add + prefix
+    } else if (cleanPhone.length == 10) {
+      return '+91$cleanPhone'; // Add country code
     }
 
-    return '+91$cleanPhone';
+    return '+91$cleanPhone'; // Default fallback
   }
 
   Future<void> _proceedToOTP() async {
@@ -213,8 +218,8 @@ class _MobileInputScreenState extends State<MobileInputScreen> {
 
                   SizedBox(height: 4.h),
 
-                  // UPI requirement note
-                  _buildUPINote(),
+                  // UPI wallet requirement note
+                  _buildUPIWalletNote(),
 
                   Spacer(),
 
@@ -225,6 +230,9 @@ class _MobileInputScreenState extends State<MobileInputScreen> {
 
                   // Terms and privacy
                   _buildTermsText(),
+
+                  // Mock OTP debug indicator
+                  if (AppConstants.ENABLE_MOCK_OTP) _buildMockModeIndicator(),
                 ],
               ),
             ),
@@ -431,20 +439,20 @@ class _MobileInputScreenState extends State<MobileInputScreen> {
     );
   }
 
-  Widget _buildUPINote() {
+  Widget _buildUPIWalletNote() {
     return Container(
       padding: EdgeInsets.all(4.w),
       decoration: BoxDecoration(
-        color: Colors.amber[50],
+        color: Colors.blue[50],
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.amber[200]!),
+        border: Border.all(color: Colors.blue[200]!),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CustomIconWidget(
-            iconName: 'info',
-            color: Colors.amber[700]!,
+            iconName: 'account_balance_wallet',
+            color: Colors.blue[700]!,
             size: 5.w,
           ),
           SizedBox(width: 3.w),
@@ -456,14 +464,14 @@ class _MobileInputScreenState extends State<MobileInputScreen> {
                   'UPI Wallet Required',
                   style: AppTheme.lightTheme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: Colors.amber[700],
+                    color: Colors.blue[700],
                   ),
                 ),
                 SizedBox(height: 0.5.h),
                 Text(
-                  'Make sure your mobile number is linked to a UPI wallet (PhonePe, GPay, Paytm) to receive instant rewards.',
+                  'Your mobile number must be linked to a UPI wallet (PhonePe, GPay, Paytm, etc.) to receive instant rewards.',
                   style: AppTheme.lightTheme.textTheme.bodySmall?.copyWith(
-                    color: Colors.amber[700],
+                    color: Colors.blue[700],
                   ),
                 ),
               ],
@@ -552,6 +560,37 @@ class _MobileInputScreenState extends State<MobileInputScreen> {
         color: Colors.grey[600],
       ),
       textAlign: TextAlign.center,
+    );
+  }
+
+  Widget _buildMockModeIndicator() {
+    return Container(
+      margin: EdgeInsets.only(top: 2.h),
+      padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.h),
+      decoration: BoxDecoration(
+        color: Colors.orange[100],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.orange[300]!),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            AppConstants.MOCK_MODE_WARNING,
+            style: AppTheme.lightTheme.textTheme.bodySmall?.copyWith(
+              color: Colors.orange[700],
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          SizedBox(width: 2.w),
+          Text(
+            '(${AppConstants.MOCK_MODE_DESCRIPTION})',
+            style: AppTheme.lightTheme.textTheme.bodySmall?.copyWith(
+              color: Colors.orange[600],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
